@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dynamic-sankey"
+version = "0.2.0"
+description = "Generate animated, standalone-HTML Sankey diagrams with true D3.js SVG morphing"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Stephan Hausberg", email = "stephan.hausberg@example.com"}
+]
+keywords = ["sankey", "visualization", "d3", "animation", "flow-diagram", "html"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+
+# stdlib only — json is built-in
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/StephanHausberg/dynamic_sankey"
+Repository = "https://github.com/StephanHausberg/dynamic_sankey"
+"Bug Tracker" = "https://github.com/StephanHausberg/dynamic_sankey/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["dynamic_sankey"]
