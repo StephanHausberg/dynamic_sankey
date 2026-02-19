@@ -119,20 +119,20 @@ Raises `ValueError` if:
 
 ## Examples
 
-All examples live in [`examples/`](examples/). Each has a `config.py` (data)
-and a `generate.py` (one-liner runner that opens the result in the browser).
+Pre-built demos are in [`docs/`](docs/) and viewable directly in the browser via
+[htmlpreview.github.io](https://htmlpreview.github.io):
 
-| Example | Description | Nodes | Links | Steps |
-| ------- | ----------- | ----- | ----- | ----- |
-| [01_basic](examples/01_basic/) | A/B/C nodes, minimal | 6 | 6 | 4 |
-| [02_energiemix](examples/02_energiemix/) | Seasonal energy mix (sources → conversion → sectors) | 10 | 12 | 4 |
-| [03_customer_journey](examples/03_customer_journey/) | Website traffic funnel (sources → pages → conversions) | 11 | 12 | 4 |
+| Example | Live demo | Source | Nodes | Links | Steps |
+| ------- | --------- | ------ | ----- | ----- | ----- |
+| 01 Basic | [▶ Open](https://htmlpreview.github.io/?https://github.com/StephanHausberg/dynamic_sankey/blob/main/docs/01_basic.html) | [config](examples/01_basic/config.py) | 6 | 6 | 4 |
+| 02 Energiemix | [▶ Open](https://htmlpreview.github.io/?https://github.com/StephanHausberg/dynamic_sankey/blob/main/docs/02_energiemix.html) | [config](examples/02_energiemix/config.py) | 10 | 12 | 4 |
+| 03 Customer Journey | [▶ Open](https://htmlpreview.github.io/?https://github.com/StephanHausberg/dynamic_sankey/blob/main/docs/03_customer_journey.html) | [config](examples/03_customer_journey/config.py) | 11 | 12 | 4 |
 
-### Run an example
+### Run locally
 
 ```bash
 python examples/02_energiemix/generate.py
-# → opens examples/02_energiemix/output.html in the browser
+# → generates output.html and opens it in the browser
 ```
 
 ### Example 02 — Energiemix

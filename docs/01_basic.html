@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basic Sankey — Q1–Q4 2024</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #ffffff;
+      color: #333;
+      padding: 28px 36px;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #222;
+    }
+
+    #chart { width: 100%; }
+
+    #controls {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-top: 28px;
+      padding: 0 2px;
+    }
+
+    #play-btn {
+      flex-shrink: 0;
+      padding: 8px 22px;
+      font-size: 14px;
+      font-family: Arial, sans-serif;
+      background: #4C78A8;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+      min-width: 100px;
+    }
+    #play-btn:hover { background: #3a5f8a; }
+
+    #slider-wrap { flex: 1; }
+
+    #slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #ddd;
+      outline: none;
+      cursor: pointer;
+    }
+    #slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #4C78A8;
+      cursor: pointer;
+    }
+    #slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #4C78A8;
+      cursor: pointer;
+      border: none;
+    }
+
+    #slider-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+    #slider-labels span { font-size: 11px; color: #999; }
+
+    #current-label {
+      flex-shrink: 0;
+      min-width: 120px;
+      text-align: right;
+      font-size: 15px;
+      font-weight: 700;
+      color: #4C78A8;
+    }
+
+    #tooltip {
+      position: fixed;
+      background: rgba(25, 25, 25, 0.85);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 13px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <h2>Basic Sankey — Q1–Q4 2024</h2>
+  <div id="chart"></div>
+
+  <div id="controls">
+    <button id="play-btn">&#9654; Play</button>
+    <div id="slider-wrap">
+      <input type="range" id="slider">
+      <div id="slider-labels"></div>
+    </div>
+    <div id="current-label"></div>
+  </div>
+
+  <div id="tooltip"></div>
+
+  <!-- D3 v7 + d3-sankey (both extend the global d3 namespace via UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12/dist/d3-sankey.min.js"></script>
+
+  <script>
+  "use strict";
+
+  // ── Data (injected by Python generator) ────────────────────────────────────
+  const CONFIG = {
+  "nodes": [
+    {
+      "id": 0,
+      "label": "A1",
+      "color": "#4C78A8"
+    },
+    {
+      "id": 1,
+      "label": "A2",
+      "color": "#F58518"
+    },
+    {
+      "id": 2,
+      "label": "B1",
+      "color": "#54A24B"
+    },
+    {
+      "id": 3,
+      "label": "B2",
+      "color": "#E45756"
+    },
+    {
+      "id": 4,
+      "label": "C1",
+      "color": "#72B7B2"
+    },
+    {
+      "id": 5,
+      "label": "C2",
+      "color": "#B279A2"
+    }
+  ],
+  "links": [
+    {
+      "source": 0,
+      "target": 2
+    },
+    {
+      "source": 1,
+      "target": 3
+    },
+    {
+      "source": 0,
+      "target": 3
+    },
+    {
+      "source": 2,
+      "target": 4
+    },
+    {
+      "source": 3,
+      "target": 4
+    },
+    {
+      "source": 3,
+      "target": 5
+    }
+  ],
+  "time_series": [
+    {
+      "label": "Q1 2024",
+      "values": [
+        8,
+        4,
+        2,
+        8,
+        4,
+        2
+      ]
+    },
+    {
+      "label": "Q2 2024",
+      "values": [
+        6,
+        5,
+        3,
+        6,
+        5,
+        1
+      ]
+    },
+    {
+      "label": "Q3 2024",
+      "values": [
+        7,
+        3,
+        4,
+        5,
+        6,
+        2
+      ]
+    },
+    {
+      "label": "Q4 2024",
+      "values": [
+        9,
+        2,
+        1,
+        9,
+        3,
+        3
+      ]
+    }
+  ]
+};
+
+  // ── Dimensions ─────────────────────────────────────────────────────────────
+  const MARGIN  = { top: 10, right: 190, bottom: 10, left: 10 };
+  const TOTAL_W = 1000;
+  const TOTAL_H = 520;
+  const W = TOTAL_W - MARGIN.left - MARGIN.right;
+  const H = TOTAL_H - MARGIN.top  - MARGIN.bottom;
+
+  // ── SVG ────────────────────────────────────────────────────────────────────
+  const svg = d3.select("#chart")
+    .append("svg")
+    .attr("viewBox", `0 0 ${TOTAL_W} ${TOTAL_H}`)
+    .attr("width", "100%")
+    .style("display", "block")
+    .append("g")
+    .attr("transform", `translate(${MARGIN.left},${MARGIN.top})`);
+
+  // ── Sankey generator ───────────────────────────────────────────────────────
+  const sankeyGen = d3.sankey()
+    .nodeId(d => d.id)
+    .nodeWidth(22)
+    .nodePadding(14)
+    .extent([[0, 0], [W, H]]);
+
+  // ── Color helpers ──────────────────────────────────────────────────────────
+  const nodeColorMap = new Map(CONFIG.nodes.map(n => [n.id, n.color]));
+
+  function hexToRgba(hex, alpha) {
+    const v = parseInt(hex.replace("#", ""), 16);
+    return `rgba(${(v >> 16) & 255},${(v >> 8) & 255},${v & 255},${alpha})`;
+  }
+
+  // Link stroke colors are fixed (source-node color, 50 % opacity)
+  const linkColors = CONFIG.links.map(l =>
+    hexToRgba(nodeColorMap.get(l.source), 0.5)
+  );
+
+  // ── Layout data builder ────────────────────────────────────────────────────
+  // Fresh objects every call so d3-sankey can cleanly re-initialise.
+  function buildData(step) {
+    const vals = CONFIG.time_series[step].values;
+    return {
+      nodes: CONFIG.nodes.map(n => ({ ...n })),
+      links: CONFIG.links.map((l, i) => ({
+        source: l.source,
+        target: l.target,
+        value : Math.max(vals[i], 0.001),
+      })),
+    };
+  }
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let currentStep = 0;
+  let playTimer   = null;
+  let graph       = sankeyGen(buildData(0));
+
+  // ── D3 link path generator ────────────────────────────────────────────────
+  // Uses: d.source.x1, d.target.x0 (x fixed by topology)
+  //       d.y0, d.y1, d.width        (y changes with values)
+  const linkPathGen = d3.sankeyLinkHorizontal();
+
+  // ── SVG layers: links behind nodes ────────────────────────────────────────
+  const gLinks = svg.append("g").attr("class", "g-links");
+  const gNodes = svg.append("g").attr("class", "g-nodes");
+
+  // ── Initial render ─────────────────────────────────────────────────────────
+  let linkSel = gLinks.selectAll("path")
+    .data(graph.links)
+    .join("path")
+      .attr("fill",         "none")
+      .attr("stroke",       (d, i) => linkColors[i])
+      .attr("stroke-width", d => Math.max(1, d.width))
+      .attr("d",            linkPathGen)
+      .on("mouseover", (event, d) => {
+        const val = CONFIG.time_series[currentStep].values[d.index];
+        tooltip.style("opacity", 1)
+               .html(`Flow: <b>${val.toLocaleString("de-DE")}</b>`);
+        moveTooltip(event);
+      })
+      .on("mousemove", moveTooltip)
+      .on("mouseout",  () => tooltip.style("opacity", 0));
+
+  let nodeSel = gNodes.selectAll("g")
+    .data(graph.nodes, d => d.id)
+    .join("g");
+
+  nodeSel.append("rect")
+    .attr("x",      d => d.x0)
+    .attr("y",      d => d.y0)
+    .attr("width",  d => d.x1 - d.x0)
+    .attr("height", d => d.y1 - d.y0)
+    .attr("fill",   d => d.color)
+    .attr("rx", 3);
+
+  nodeSel.append("text")
+    .attr("x",           d => d.x0 < W / 2 ? d.x1 + 8 : d.x0 - 8)
+    .attr("y",           d => (d.y0 + d.y1) / 2)
+    .attr("dy",          "0.35em")
+    .attr("text-anchor", d => d.x0 < W / 2 ? "start" : "end")
+    .attr("font-size",   13)
+    .attr("font-weight", "bold")
+    .attr("fill",        "#333")
+    .text(d => d.label);
+
+  // ── Core update: true SVG morphing via attrTween ───────────────────────────
+  function updateStep(newStep, dur = 600) {
+    // 1. Snapshot layout positions before recomputing
+    const snapLinks = graph.links.map(l => ({
+      y0: l.y0, y1: l.y1, width: l.width,
+    }));
+
+    // 2. Compute new layout
+    graph       = sankeyGen(buildData(newStep));
+    currentStep = newStep;
+
+    if (dur === 0) {
+      // Instant jump
+      linkSel = gLinks.selectAll("path").data(graph.links);
+      linkSel
+        .attr("d",            linkPathGen)
+        .attr("stroke-width", d => Math.max(1, d.width));
+
+      nodeSel = gNodes.selectAll("g").data(graph.nodes, d => d.id);
+      nodeSel.select("rect")
+        .attr("y",      d => d.y0)
+        .attr("height", d => d.y1 - d.y0);
+      nodeSel.select("text")
+        .attr("y", d => (d.y0 + d.y1) / 2);
+
+    } else {
+      // Animated morph:
+      // attrTween interpolates y0, y1, width numerically per frame,
+      // then regenerates the bezier path → true continuous morphing.
+      const ease = d3.easeCubicInOut;
+
+      linkSel = gLinks.selectAll("path").data(graph.links);
+      linkSel.transition().duration(dur).ease(ease)
+        .attrTween("stroke-width", (d, i) => {
+          const w0 = snapLinks[i].width, w1 = d.width;
+          return t => String(Math.max(1, w0 + (w1 - w0) * t));
+        })
+        .attrTween("d", (d, i) => {
+          const s = snapLinks[i];
+          return t => linkPathGen({
+            source: d.source,  // node refs carry fixed x positions
+            target: d.target,
+            y0:     s.y0    + (d.y0    - s.y0)    * t,
+            y1:     s.y1    + (d.y1    - s.y1)    * t,
+            width:  s.width + (d.width - s.width) * t,
+          });
+        });
+
+      nodeSel = gNodes.selectAll("g").data(graph.nodes, d => d.id);
+      nodeSel.select("rect")
+        .transition().duration(dur).ease(ease)
+        .attr("y",      d => d.y0)
+        .attr("height", d => d.y1 - d.y0);
+      nodeSel.select("text")
+        .transition().duration(dur).ease(ease)
+        .attr("y", d => (d.y0 + d.y1) / 2);
+    }
+
+    slider.value             = currentStep;
+    currentLabel.textContent = CONFIG.time_series[currentStep].label;
+  }
+
+  // ── Controls ───────────────────────────────────────────────────────────────
+  const slider       = document.getElementById("slider");
+  const playBtn      = document.getElementById("play-btn");
+  const currentLabel = document.getElementById("current-label");
+
+  slider.min   = 0;
+  slider.max   = CONFIG.time_series.length - 1;
+  slider.value = 0;
+  slider.step  = 1;
+
+  slider.addEventListener("input", function () {
+    stopPlay();
+    updateStep(+this.value);
+  });
+
+  const labelsDiv = document.getElementById("slider-labels");
+  CONFIG.time_series.forEach(ts => {
+    const s = document.createElement("span");
+    s.textContent = ts.label;
+    labelsDiv.appendChild(s);
+  });
+
+  const PLAY_INTERVAL_MS = 950;  // > transition duration (600 ms)
+
+  playBtn.addEventListener("click", () => playTimer ? stopPlay() : startPlay());
+
+  function startPlay() {
+    playBtn.innerHTML = "&#9646;&#9646; Pause";
+    if (currentStep >= CONFIG.time_series.length - 1) {
+      updateStep(0, 0);
+    }
+    playTimer = setInterval(() => {
+      const next = currentStep + 1;
+      if (next >= CONFIG.time_series.length) { stopPlay(); return; }
+      updateStep(next);
+    }, PLAY_INTERVAL_MS);
+  }
+
+  function stopPlay() {
+    clearInterval(playTimer);
+    playTimer = null;
+    playBtn.innerHTML = "&#9654; Play";
+  }
+
+  // ── Tooltip ────────────────────────────────────────────────────────────────
+  const tooltip = d3.select("#tooltip");
+
+  function moveTooltip(event) {
+    tooltip
+      .style("left", (event.clientX + 14) + "px")
+      .style("top",  (event.clientY - 32) + "px");
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  currentLabel.textContent = CONFIG.time_series[0].label;
+
+  </script>
+</body>
+</html>
