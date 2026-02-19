@@ -1,110 +1,9 @@
-"""
-dynamic_sankey.generator
-------------------------
-Core HTML generator for D3.js-based animated Sankey diagrams.
-
-Generates a fully self-contained, CDN-linked standalone HTML file.
-No server required. No Plotly. Pure D3 SVG morphing.
-"""
-
-import json
-
-
-def validate_config(config: dict) -> None:
-    """
-    Validate a sankey config dict. Raises ValueError on any inconsistency.
-
-    Checks:
-    - nodes and links are non-empty
-    - every link's source/target ID exists in nodes
-    - every time_series entry has exactly len(links) values
-    """
-    nodes = config.get("nodes", [])
-    links = config.get("links", [])
-    time_series = config.get("time_series", [])
-
-    if not nodes:
-        raise ValueError("config['nodes'] must contain at least one node.")
-    if not links:
-        raise ValueError("config['links'] must contain at least one link.")
-    if not time_series:
-        raise ValueError("config['time_series'] must contain at least one entry.")
-
-    node_ids = {n["id"] for n in nodes}
-    n_links = len(links)
-
-    for i, link in enumerate(links):
-        if link["source"] not in node_ids:
-            raise ValueError(
-                f"links[{i}]: source ID {link['source']!r} not found in nodes."
-            )
-        if link["target"] not in node_ids:
-            raise ValueError(
-                f"links[{i}]: target ID {link['target']!r} not found in nodes."
-            )
-
-    for ts in time_series:
-        if len(ts["values"]) != n_links:
-            raise ValueError(
-                f"time_series '{ts['label']}': "
-                f"got {len(ts['values'])} values, expected {n_links} (= len(links))."
-            )
-
-
-def generate_html(config: dict, title: str = "Dynamic Sankey") -> str:
-    """
-    Generate a standalone HTML file with an animated D3.js Sankey diagram.
-
-    Args:
-        config: Dict with keys:
-            - nodes:       list of {id, label, color}
-            - links:       list of {source, target}  (topology, fixed across time)
-            - time_series: list of {label, values}   (values align with links list)
-            - animation:   (optional) dict with animation settings:
-                - transition_ms:   int   transition duration in ms (default 600)
-                - play_interval_ms: int  ms between auto-play steps (default 950)
-                - easing:          str   D3 easing name, e.g. "easeSinInOut",
-                                         "easeCubicInOut", "easeLinear" (default
-                                         "easeCubicInOut")
-        title:  Title shown above the diagram (default: "Dynamic Sankey")
-
-    Returns:
-        HTML string — write to any .html file, open in browser, done.
-
-    Example:
-        >>> from dynamic_sankey import generate_html
-        >>> from my_config import SANKEY_CONFIG
-        >>> html = generate_html(SANKEY_CONFIG, title="My Flows 2024")
-        >>> with open("output.html", "w") as f:
-        ...     f.write(html)
-    """
-    validate_config(config)
-
-    anim = config.get("animation", {})
-    transition_ms    = str(anim.get("transition_ms",    600))
-    play_interval_ms = str(anim.get("play_interval_ms", 950))
-    easing           = anim.get("easing", "easeCubicInOut")
-
-    config_json = json.dumps(config, ensure_ascii=False, indent=2)
-    return (
-        _HTML_TEMPLATE
-        .replace("__TITLE__",            title)
-        .replace("__CONFIG_JSON__",      config_json)
-        .replace("__TRANSITION_MS__",    transition_ms)
-        .replace("__PLAY_INTERVAL_MS__", play_interval_ms)
-        .replace("__EASING__",           easing)
-    )
-
-
-# ---------------------------------------------------------------------------
-# HTML / D3 template  (r-string avoids Python escape conflicts with JS code)
-# ---------------------------------------------------------------------------
-_HTML_TEMPLATE = r"""<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>__TITLE__</title>
+  <title>Smart Building — Energiefluss 2024</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -206,7 +105,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h2>__TITLE__</h2>
+  <h2>Smart Building — Energiefluss 2024</h2>
   <div id="chart"></div>
 
   <div id="controls">
@@ -228,7 +127,279 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   "use strict";
 
   // ── Data (injected by Python generator) ────────────────────────────────────
-  const CONFIG = __CONFIG_JSON__;
+  const CONFIG = {
+  "nodes": [
+    {
+      "id": 0,
+      "label": "Netzstrom",
+      "color": "#5A6472"
+    },
+    {
+      "id": 1,
+      "label": "PV-Anlage",
+      "color": "#C8943A"
+    },
+    {
+      "id": 2,
+      "label": "HLK-Anlage",
+      "color": "#4A7FA0"
+    },
+    {
+      "id": 3,
+      "label": "Beleuchtung",
+      "color": "#9A9070"
+    },
+    {
+      "id": 4,
+      "label": "Produktion",
+      "color": "#6A7868"
+    },
+    {
+      "id": 5,
+      "label": "Büro & Verwaltung",
+      "color": "#7A8C9A"
+    },
+    {
+      "id": 6,
+      "label": "Außen- & Allg.-fl.",
+      "color": "#8A9A82"
+    },
+    {
+      "id": 7,
+      "label": "Wärmeverluste",
+      "color": "#B09898"
+    }
+  ],
+  "links": [
+    {
+      "source": 0,
+      "target": 2
+    },
+    {
+      "source": 0,
+      "target": 3
+    },
+    {
+      "source": 0,
+      "target": 4
+    },
+    {
+      "source": 1,
+      "target": 2
+    },
+    {
+      "source": 1,
+      "target": 3
+    },
+    {
+      "source": 2,
+      "target": 5
+    },
+    {
+      "source": 2,
+      "target": 6
+    },
+    {
+      "source": 2,
+      "target": 7
+    },
+    {
+      "source": 3,
+      "target": 5
+    },
+    {
+      "source": 3,
+      "target": 6
+    }
+  ],
+  "time_series": [
+    {
+      "label": "Jan 2024",
+      "values": [
+        850,
+        175,
+        320,
+        40,
+        10,
+        545,
+        175,
+        170,
+        148,
+        37
+      ]
+    },
+    {
+      "label": "Feb 2024",
+      "values": [
+        795,
+        168,
+        312,
+        75,
+        18,
+        530,
+        168,
+        172,
+        143,
+        43
+      ]
+    },
+    {
+      "label": "Mrz 2024",
+      "values": [
+        495,
+        148,
+        330,
+        135,
+        38,
+        390,
+        150,
+        90,
+        140,
+        46
+      ]
+    },
+    {
+      "label": "Apr 2024",
+      "values": [
+        195,
+        128,
+        342,
+        185,
+        58,
+        240,
+        95,
+        45,
+        128,
+        58
+      ]
+    },
+    {
+      "label": "Mai 2024",
+      "values": [
+        248,
+        108,
+        352,
+        225,
+        72,
+        300,
+        112,
+        61,
+        118,
+        62
+      ]
+    },
+    {
+      "label": "Jun 2024",
+      "values": [
+        548,
+        98,
+        362,
+        285,
+        82,
+        520,
+        200,
+        113,
+        112,
+        68
+      ]
+    },
+    {
+      "label": "Jul 2024",
+      "values": [
+        682,
+        93,
+        358,
+        265,
+        78,
+        600,
+        232,
+        115,
+        108,
+        63
+      ]
+    },
+    {
+      "label": "Aug 2024",
+      "values": [
+        618,
+        98,
+        348,
+        258,
+        73,
+        558,
+        214,
+        104,
+        112,
+        59
+      ]
+    },
+    {
+      "label": "Sep 2024",
+      "values": [
+        278,
+        118,
+        338,
+        205,
+        62,
+        318,
+        122,
+        43,
+        128,
+        52
+      ]
+    },
+    {
+      "label": "Okt 2024",
+      "values": [
+        448,
+        142,
+        328,
+        122,
+        32,
+        368,
+        138,
+        64,
+        138,
+        36
+      ]
+    },
+    {
+      "label": "Nov 2024",
+      "values": [
+        718,
+        168,
+        318,
+        58,
+        15,
+        488,
+        182,
+        106,
+        143,
+        40
+      ]
+    },
+    {
+      "label": "Dez 2024",
+      "values": [
+        868,
+        182,
+        308,
+        38,
+        10,
+        562,
+        192,
+        152,
+        152,
+        40
+      ]
+    }
+  ],
+  "animation": {
+    "transition_ms": 800,
+    "play_interval_ms": 1200,
+    "easing": "easeSinInOut"
+  }
+};
 
   // ── Dimensions ─────────────────────────────────────────────────────────────
   const MARGIN  = { top: 10, right: 190, bottom: 10, left: 10 };
@@ -334,7 +505,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     .text(d => d.label);
 
   // ── Core update: true SVG morphing via attrTween ───────────────────────────
-  function updateStep(newStep, dur = __TRANSITION_MS__) {
+  function updateStep(newStep, dur = 800) {
     // Cancel any running transition so rapid slider moves don't pile up
     gLinks.selectAll("path").interrupt();
     gNodes.selectAll("g").selectAll("rect").interrupt();
@@ -367,7 +538,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
       // Animated morph:
       // attrTween interpolates y0, y1, width numerically per frame,
       // then regenerates the bezier path → true continuous morphing.
-      const ease = d3.__EASING__;
+      const ease = d3.easeSinInOut;
 
       linkSel = gLinks.selectAll("path").data(graph.links);
       linkSel.transition().duration(dur).ease(ease)
@@ -422,7 +593,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     labelsDiv.appendChild(s);
   });
 
-  const PLAY_INTERVAL_MS = __PLAY_INTERVAL_MS__;
+  const PLAY_INTERVAL_MS = 1200;
 
   playBtn.addEventListener("click", () => playTimer ? stopPlay() : startPlay());
 
@@ -459,4 +630,3 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   </script>
 </body>
 </html>
-"""
